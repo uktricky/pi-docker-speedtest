@@ -13,24 +13,36 @@ run_speedtest()
     DATE=$(date +%s)
     HOSTNAME=$(hostname)
 
-    # Start speed test
     echo "Running a Speed Test..."
+
     JSON=$(speedtest --accept-license --accept-gdpr -f json)
+
     DOWNLOAD="$(echo $JSON | jq -r '.download.bandwidth')"
     UPLOAD="$(echo $JSON | jq -r '.upload.bandwidth')"
+    JITTER="$(echo $JSON | jq -r '.ping.jitter')"
+    LATENCY="$(echo $JSON | jq -r '.ping.latency')"
+
+    ISP="$(echo $JSON | jq -r '.isp')"
+
+    SVRID="$(echo $JSON | jq -r '.server.id')"
+    SVRNAME="$(echo $JSON | jq -r '.server.name')"
+    SVRLOCATION="$(echo $JSON | jq -r '.server.location')"
+    SVRHOST="$(echo $JSON | jq -r '.server.host')"
+    SVRIP="$(echo $JSON | jq -r '.server.ip')"
+
     echo "Your download speed is $(($DOWNLOAD  / 125000 )) Mbps ($DOWNLOAD Bytes/s)."
     echo "Your upload speed is $(($UPLOAD  / 125000 )) Mbps ($UPLOAD Bytes/s)."
 
-    # Save results in the database
-    if $DB_SAVE; 
+   # Save results in the database
+    if $DB_SAVE;
     then
         echo "Saving values to database..."
-        curl -s -S -XPOST "$DB_HOST/write?db=$DB_NAME&precision=s&u=$DB_USERNAME&p=$DB_PASSWORD" \
-            --data-binary "download,host=$HOSTNAME value=$DOWNLOAD $DATE"
-        curl -s -S -XPOST "$DB_HOST/write?db=$DB_NAME&precision=s&u=$DB_USERNAME&p=$DB_PASSWORD" \
-            --data-binary "upload,host=$HOSTNAME value=$UPLOAD $DATE"
-        echo "Values saved."
+
+	curl -s -S -XPOST "$DB_HOST/write?db=$DB_NAME&precision=s&u=$DB_USERNAME&p=$DB_PASSWORD" \
+	--data-binary "results,host=$HOSTNAME,SVRLOC=$SVRLOCATION,SVRIP=$SVRIP UPLOAD=$UPLOAD,DOWNLOAD=$DOWNLOAD,JITTER=$JITTER,LATENCY=$LATENCY $DATE"
+
     fi
+
 }
 
 if $LOOP;
@@ -45,3 +57,6 @@ then
 else
     run_speedtest
 fi
+
+
+
